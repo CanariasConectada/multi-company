@@ -8,13 +8,11 @@ class ResConfigSettings(models.TransientModel):
     _inherit = "res.config.settings"
 
     partner_multi_company_restrict_cross_company = fields.Boolean(
-        string="Hide other-company and administrator contacts",
-        help="Regular internal users (without the Settings/Administration "
-        "group) keep seeing their own company's colleagues, but no longer "
-        "see colleagues from another company, nor any system "
-        "administrator's contact, in or out of their company. Disable if "
-        "this breaks a legitimate use case, such as adding a colleague as "
-        "a follower.",
+        string="Restrict internal-user contacts to own company",
+        help="Regular internal users (without multi-company access) keep "
+        "seeing their own company's colleagues, but no longer see "
+        "colleagues from another company. Disable if this breaks a "
+        "legitimate use case, such as adding a colleague as a follower.",
     )
 
     @api.model

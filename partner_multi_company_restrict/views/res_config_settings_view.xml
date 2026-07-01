@@ -13,8 +13,8 @@
             >
                 <setting
                     id="partner_multi_company_restrict_cross_company_setting"
-                    string="Hide other-company and administrator contacts"
-                    help="Regular internal users keep seeing their own company's colleagues, but no longer see colleagues from another company or any system administrator's contact."
+                    string="Restrict internal-user contacts to own company"
+                    help="Regular internal users keep seeing their own company's colleagues, but no longer see colleagues from another company."
                 >
                     <field name="partner_multi_company_restrict_cross_company" />
                 </setting>
