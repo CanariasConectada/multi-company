@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 Canarias Conectada
+     License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html -->
+<odoo>
+    <!-- ``base.res_partner_rule`` (patched by ``partner_multi_company``'s
+         post_init_hook to use ``company_ids``) still exempts any contact
+         linked to an internal user (``partner_share = False``) from the
+         company scoping, so a colleague's contact card from another company
+         stays visible everywhere. Global (no ``groups``) rules are ANDed
+         together (see ``ir.rule._compute_domain``), so this rule tightens
+         that exemption away without touching the existing one: it must
+         still hold for the record to be visible, on top of the base rule. -->
+    <record id="res_partner_rule_restrict_cross_company" model="ir.rule">
+        <field
+            name="name"
+        >res.partner: restrict cross-company internal-user contacts</field>
+        <field name="model_id" ref="base.model_res_partner" />
+        <field name="domain_force">
+            ['|', ('company_ids', 'in', company_ids), '|', ('company_ids', '=', False), (1, '=', 1) if user.has_group('base.group_multi_company') else (0, '=', 1)]
+        </field>
+    </record>
+</odoo>

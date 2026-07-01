@@ -1,0 +1,73 @@
+# Copyright 2026 Canarias Conectada
+# License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
+
+from odoo.exceptions import AccessError
+from odoo.tests import new_test_user, tagged
+from odoo.tests.common import TransactionCase
+
+
+@tagged("post_install", "-at_install")
+class TestPartnerRestrictCrossCompany(TransactionCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.company_a = cls.env["res.company"].create({"name": "Restrict Co A"})
+        cls.company_b = cls.env["res.company"].create({"name": "Restrict Co B"})
+        cls.merchant_a = new_test_user(
+            cls.env,
+            login="restrict_merchant_a",
+            groups="base.group_user,base.group_partner_manager",
+            company_id=cls.company_a.id,
+            company_ids=[(6, 0, cls.company_a.ids)],
+        )
+        # An internal user of company B: their partner record is linked to a
+        # user (partner_share=False) and scoped only to company B.
+        cls.internal_user_b = new_test_user(
+            cls.env,
+            login="restrict_internal_b",
+            groups="base.group_user",
+            company_id=cls.company_b.id,
+            company_ids=[(6, 0, cls.company_b.ids)],
+        )
+        cls.partner_b = cls.internal_user_b.partner_id
+
+    def test_merchant_cannot_search_other_company_internal_user_partner(self):
+        found = (
+            self.env["res.partner"]
+            .with_user(self.merchant_a)
+            .search([("id", "=", self.partner_b.id)])
+        )
+        self.assertFalse(found)
+
+    def test_merchant_cannot_read_other_company_internal_user_partner(self):
+        with self.assertRaises(AccessError):
+            self.partner_b.with_user(self.merchant_a).name  # noqa: B018
+
+    def test_multi_company_user_still_sees_it(self):
+        admin = self.env.ref("base.user_admin")
+        admin.write({"company_ids": [(4, self.company_b.id)]})
+        self.assertTrue(admin.has_group("base.group_multi_company"))
+        self.assertEqual(
+            self.partner_b.with_user(admin).name, self.partner_b.sudo().name
+        )
+
+    def test_own_company_partner_still_visible(self):
+        partner_a = self.merchant_a.partner_id
+        self.assertEqual(
+            partner_a.with_user(self.merchant_a).name, partner_a.sudo().name
+        )
+
+    def test_setting_toggle_disables_restriction(self):
+        rule = self.env.ref(
+            "partner_multi_company_restrict.res_partner_rule_restrict_cross_company"
+        )
+        rule.sudo().active = False
+        try:
+            found = (
+                self.env["res.partner"]
+                .with_user(self.merchant_a)
+                .search([("id", "=", self.partner_b.id)])
+            )
+            self.assertTrue(found)
+        finally:
+            rule.sudo().active = True
