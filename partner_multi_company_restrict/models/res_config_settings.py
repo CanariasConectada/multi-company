@@ -8,11 +8,12 @@ class ResConfigSettings(models.TransientModel):
     _inherit = "res.config.settings"
 
     partner_multi_company_restrict_cross_company = fields.Boolean(
-        string="Restrict cross-company internal-user contacts",
-        help="Also hide contacts linked to an internal user of another "
-        "company from users without multi-company access, on top of the "
-        "standard company scoping. Disable if this breaks a legitimate "
-        "cross-company use case, such as adding a colleague as a follower.",
+        string="Restrict internal-user contacts to own/created/shared",
+        help="Hide contacts linked to an internal user (a colleague, from "
+        "the same company or another one) from users without multi-company "
+        "access, unless it is their own contact, they created it, or it has "
+        "been deliberately shared (blank Companies). Disable if this breaks "
+        "a legitimate use case, such as adding a colleague as a follower.",
     )
 
     @api.model

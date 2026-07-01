@@ -30,6 +30,16 @@ class TestPartnerRestrictCrossCompany(TransactionCase):
             company_ids=[(6, 0, cls.company_b.ids)],
         )
         cls.partner_b = cls.internal_user_b.partner_id
+        # A colleague in the SAME company as merchant_a, but not created by
+        # them: must be hidden too under the stricter rule.
+        cls.colleague_a = new_test_user(
+            cls.env,
+            login="restrict_colleague_a",
+            groups="base.group_user",
+            company_id=cls.company_a.id,
+            company_ids=[(6, 0, cls.company_a.ids)],
+        )
+        cls.partner_colleague_a = cls.colleague_a.partner_id
 
     def test_merchant_cannot_search_other_company_internal_user_partner(self):
         found = (
@@ -55,6 +65,32 @@ class TestPartnerRestrictCrossCompany(TransactionCase):
         partner_a = self.merchant_a.partner_id
         self.assertEqual(
             partner_a.with_user(self.merchant_a).name, partner_a.sudo().name
+        )
+
+    def test_same_company_colleague_hidden_by_default(self):
+        # Stricter rule: even a colleague in the SAME company is hidden
+        # unless self / created-by-me / shared / exempt.
+        with self.assertRaises(AccessError):
+            self.partner_colleague_a.with_user(self.merchant_a).name  # noqa: B018
+        found = (
+            self.env["res.partner"]
+            .with_user(self.merchant_a)
+            .search([("id", "=", self.partner_colleague_a.id)])
+        )
+        self.assertFalse(found)
+
+    def test_contact_created_by_merchant_is_visible(self):
+        self.partner_colleague_a.sudo().write({"create_uid": self.merchant_a.id})
+        self.assertEqual(
+            self.partner_colleague_a.with_user(self.merchant_a).name,
+            self.partner_colleague_a.sudo().name,
+        )
+
+    def test_shared_internal_user_contact_is_visible(self):
+        self.partner_b.sudo().company_ids = False
+        self.assertEqual(
+            self.partner_b.with_user(self.merchant_a).name,
+            self.partner_b.sudo().name,
         )
 
     def test_setting_toggle_disables_restriction(self):

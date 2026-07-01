@@ -13,8 +13,8 @@
             >
                 <setting
                     id="partner_multi_company_restrict_cross_company_setting"
-                    string="Restrict cross-company internal-user contacts"
-                    help="Also hide contacts linked to an internal user of another company from users without multi-company access."
+                    string="Restrict internal-user contacts to own/created/shared"
+                    help="Hide contacts linked to a colleague (same company or another one) from users without multi-company access, unless it is their own contact, they created it, or it is deliberately shared."
                 >
                     <field name="partner_multi_company_restrict_cross_company" />
                 </setting>

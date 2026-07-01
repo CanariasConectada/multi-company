@@ -375,23 +375,33 @@ ul.auto-toc {
 !! source digest: sha256:bd104ff77924592cd889867ca144aa0beb1d12becfa4d531a37f26feb0d30f80
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -->
 <p><a class="reference external image-reference" href="https://odoo-community.org/page/development-status"><img alt="Beta" src="https://img.shields.io/badge/maturity-Beta-yellow.png" /></a> <a class="reference external image-reference" href="http://www.gnu.org/licenses/agpl-3.0-standalone.html"><img alt="License: AGPL-3" src="https://img.shields.io/badge/license-AGPL--3-blue.png" /></a> <a class="reference external image-reference" href="https://github.com/OCA/multi-company/tree/19.0/partner_multi_company_restrict"><img alt="OCA/multi-company" src="https://img.shields.io/badge/github-OCA%2Fmulti--company-lightgray.png?logo=github" /></a> <a class="reference external image-reference" href="https://translation.odoo-community.org/projects/multi-company-19-0/multi-company-19-0-partner_multi_company_restrict"><img alt="Translate me on Weblate" src="https://img.shields.io/badge/weblate-Translate%20me-F47D42.png" /></a> <a class="reference external image-reference" href="https://runboat.odoo-community.org/builds?repo=OCA/multi-company&amp;target_branch=19.0"><img alt="Try me on Runboat" src="https://img.shields.io/badge/runboat-Try%20me-875A7B.png" /></a></p>
-<p>This module tightens <tt class="docutils literal">partner_multi_company</tt>’s company scoping on
-contacts.</p>
+<p>This module restricts visibility of contacts linked to internal users
+(colleagues), on top of <tt class="docutils literal">partner_multi_company</tt>’s company scoping.</p>
 <p>Odoo’s standard <tt class="docutils literal">res.partner</tt> record rule always shows contacts linked
 to an internal user (<tt class="docutils literal">partner_share = False</tt>), regardless of company,
-so that “assigned to” pickers and similar widgets keep working. On a
-multi-company deployment where internal users belong to different
-companies, this means a merchant without multi-company access can still
-see (and interact with) the contact record of a colleague from another
-company.</p>
-<p>This module adds a second, global record rule that removes that
-exemption for users without the <em>Multi Companies</em> group: such a contact
-is only visible if it also matches the normal company scoping (own
-company, or a blank/shared company). Users with the <em>Multi Companies</em>
-group are unaffected.</p>
+so that “assigned to” pickers and similar widgets keep working. This
+means a merchant can see (and interact with) the contact record of any
+colleague, even one from a different company, or one they have no
+relationship with at all – distracting clutter at best, exposure of a
+colleague’s personal data at worst.</p>
+<p>This module adds a second, global record rule: a user without the <em>Multi
+Companies</em> group only sees a colleague’s contact if at least one of
+these holds:</p>
+<ul class="simple">
+<li>it is their own contact (the one linked to the account they are logged
+in as);</li>
+<li>they created it;</li>
+<li>it has been deliberately shared (blank <em>Companies</em>, the same
+convention used across this stack for “visible everywhere”);</li>
+<li>it is not actually an internal user’s contact in the first place (e.g.
+a portal customer), which is unaffected by this rule and keeps
+following the normal company scoping.</li>
+</ul>
+<p>Users with the <em>Multi Companies</em> group are unaffected and keep seeing
+every contact, as before.</p>
 <p>The restriction can be turned off from <em>Settings &gt; General Settings &gt;
-Companies</em> if it breaks a legitimate cross-company use case, such as
-adding a colleague as a follower on a shared document.</p>
+Companies</em> if it breaks a legitimate use case, such as adding a
+colleague as a follower on a shared document.</p>
 <p><strong>Table of contents</strong></p>
 <div class="contents local topic" id="contents">
 <ul class="simple">
