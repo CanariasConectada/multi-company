@@ -7,13 +7,22 @@ def post_init_hook(env):
     """
     Set access rule to support multi-company fields
     """
-    # Change access rule
+    # Change access rule. Deliberately ``user.company_ids`` (every company
+    # the acting user actually belongs to) and NOT the bare ``company_ids``
+    # eval-context variable (``self.env.companies``, only the ones
+    # currently active in the company switcher): visibility must not
+    # depend on which companies happen to be checked in that dropdown
+    # right now. A user genuinely assigned to a company (e.g. an
+    # administrator kept in sync by res_company_admin_sync) must be able
+    # to read that company's own contact even with a narrower active
+    # selection -- see partner_multi_company_restrict's own rule for the
+    # same reasoning applied to the rule it adds on top of this one.
     rule = env.ref("base.res_partner_rule")
     rule.write(
         {
             "domain_force": (
                 "['|', '|', ('partner_share', '=', False),"
-                "('company_ids', 'in', company_ids),"
+                "('company_ids', 'in', user.company_ids.ids),"
                 "('company_ids', '=', False)]"
             ),
         }
@@ -22,7 +31,7 @@ def post_init_hook(env):
     rule_partner_bank.write(
         {
             "domain_force": (
-                "['|', ('company_ids', 'in', company_ids),"
+                "['|', ('company_ids', 'in', user.company_ids.ids),"
                 "('company_ids', '=', False)]"
             ),
         }
