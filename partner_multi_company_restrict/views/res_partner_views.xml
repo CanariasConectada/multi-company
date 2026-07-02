@@ -18,7 +18,7 @@
             <filter name="type_company" position="after">
                 <filter
                     name="active_company_only"
-                    string="My Active Company"
+                    string="Solo Mi Compañía Activa"
                     domain="['|', ('company_ids', '=', False), ('company_ids', 'in', allowed_company_ids)]"
                 />
             </filter>
