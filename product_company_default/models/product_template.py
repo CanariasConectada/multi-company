@@ -22,12 +22,50 @@ class ProductTemplate(models.Model):
         # company record rule rejects. Writing ``company_ids`` is the safe path.
         if not self._skip_company_default():
             company_command = Command.set(self.env.company.ids)
+            multi_company_user = self.env.user.has_group("base.group_multi_company")
             for vals in vals_list:
-                # Respect an explicit choice (including a deliberate global one
-                # made by an admin who can see the field).
-                if not vals.get("company_ids") and not vals.get("company_id"):
-                    vals["company_ids"] = [company_command]
+                if vals.get("company_id") or self._commands_assign_companies(
+                    vals.get("company_ids")
+                ):
+                    # An explicit company choice: respect it.
+                    continue
+                if "company_ids" in vals and multi_company_user:
+                    # A deliberate global product (emptying commands, e.g.
+                    # ``Command.set([])``), made by someone entitled to see
+                    # and manage the multi-company field: respect it too.
+                    continue
+                # No company information -- or an emptying command sent by a
+                # user the field is hidden from (only reachable through
+                # RPC/imports, and it would make the product visible to
+                # every company): scope to the active company.
+                vals["company_ids"] = [company_command]
         return super().create(vals_list)
+
+    @api.model
+    def _commands_assign_companies(self, commands):
+        """Whether a ``company_ids`` create() value yields at least one company.
+
+        Plain truthiness is not enough: ``[Command.set([])]`` is a non-empty
+        list that assigns no company at all.
+        """
+        if not isinstance(commands, list | tuple):
+            return bool(commands)
+        ids = set()
+        for command in commands:
+            if isinstance(command, list | tuple) and command:
+                if command[0] == Command.SET:
+                    ids = set(command[2] or [])
+                elif command[0] in (Command.LINK, Command.UPDATE) and command[1]:
+                    ids.add(command[1])
+                elif command[0] == Command.CREATE:
+                    return True
+                elif command[0] == Command.CLEAR:
+                    ids = set()
+                elif command[0] in (Command.DELETE, Command.UNLINK):
+                    ids.discard(command[1])
+            elif isinstance(command, int) and command:
+                ids.add(command)
+        return bool(ids)
 
     @api.model
     def _skip_company_default(self):
