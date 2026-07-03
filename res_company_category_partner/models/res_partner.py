@@ -1,7 +1,7 @@
 # Copyright 2026 Canarias Conectada
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-from odoo import api, fields, models
+from odoo import fields, models
 from odoo.exceptions import AccessError, UserError
 
 MANAGER_GROUP = "res_company_category_partner.group_company_category_manager"
@@ -65,7 +65,12 @@ class ResPartner(models.Model):
             company_map.setdefault(company.partner_id.id, company)
         return company_map
 
-    @api.depends("ref_company_ids.category_id")
+    # No @api.depends: res.partner has no relational path towards the
+    # companies it backs (base dropped ``ref_company_ids``), so the source
+    # (``res.company.category_id``) is reached through a search instead.
+    # The field is not stored and is cached per user/allowed-companies, so
+    # it is recomputed whenever a fresh environment reads it; assignments
+    # through the inverse keep the very cache that just wrote it coherent.
     def _compute_company_category_id(self):
         company_map = self._get_category_company_map()
         allowed = self.env.companies
