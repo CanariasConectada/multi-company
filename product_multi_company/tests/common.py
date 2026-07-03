@@ -37,7 +37,7 @@ class ProductMultiCompanyCommon:
             {
                 "name": "User company 1",
                 "login": "user_company_1",
-                "groups_id": [(6, 0, cls.groups.ids)],
+                "group_ids": [(6, 0, cls.groups.ids)],
                 "company_id": cls.company_1.id,
                 "company_ids": [(6, 0, cls.company_1.ids)],
             }
@@ -46,7 +46,7 @@ class ProductMultiCompanyCommon:
             {
                 "name": "User company 2",
                 "login": "user_company_2",
-                "groups_id": [(6, 0, cls.groups.ids)],
+                "group_ids": [(6, 0, cls.groups.ids)],
                 "company_id": cls.company_2.id,
                 "company_ids": [(6, 0, cls.company_2.ids)],
             }
@@ -56,7 +56,12 @@ class ProductMultiCompanyCommon:
     def setUpClass(cls):
         super().setUpClass()
         cls.env = cls.env(context=dict(cls.env.context, tracking_disable=True))
-        cls.groups = cls.env.ref("base.group_system")
+        # A product manager, not a system admin: admins may legitimately be
+        # kept in sync with every company (res_company_admin_sync), which
+        # would defeat the cross-company isolation these tests assert.
+        cls.groups = cls.env.ref("base.group_user") + cls.env.ref(
+            "product.group_product_manager"
+        )
         cls.company_obj = cls.env["res.company"]
         cls.company_1 = cls.company_obj.create({"name": "Test company 1"})
         cls.company_2 = cls.company_obj.create({"name": "Test company 2"})
