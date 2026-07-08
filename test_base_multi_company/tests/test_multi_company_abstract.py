@@ -2,8 +2,6 @@
 # Copyright 2021 ACSONE SA/NV
 # License LGPL-3 - See http://www.gnu.org/licenses/lgpl-3.0.html
 
-from odoo_test_helper import FakeModelLoader
-
 from odoo.fields import Command
 from odoo.tests import common
 
@@ -11,30 +9,10 @@ from odoo.tests import common
 class TestMultiCompanyAbstract(common.TransactionCase):
     def setUp(self):
         super().setUp()
-        self.loader = FakeModelLoader(self.env, self.__module__)
-        self.loader.backup_registry()
-
-        # The fake class is imported here !! After the backup_registry
-        from .multi_company_abstract_tester import MultiCompanyAbstractTester
-
-        self.loader.update_registry((MultiCompanyAbstractTester,))
-
         self.test_model = self.env["multi.company.abstract.tester"]
 
         self.tester_model = self.env["ir.model"].search(
             [("model", "=", "multi.company.abstract.tester")]
-        )
-
-        # Access record:
-        self.env["ir.model.access"].create(
-            {
-                "name": "access.tester",
-                "model_id": self.tester_model.id,
-                "perm_read": 1,
-                "perm_write": 1,
-                "perm_create": 1,
-                "perm_unlink": 1,
-            }
         )
 
         self.record_1 = self.test_model.create({"name": "test"})
@@ -42,10 +20,6 @@ class TestMultiCompanyAbstract(common.TransactionCase):
         self.company_2 = self.env["res.company"].create(
             {"name": "Test Co 2", "email": "base_multi_company@test.com"}
         )
-
-    def tearDown(self):
-        self.loader.restore_registry()
-        return super().tearDown()
 
     def add_company(self, company):
         """Add company to the test record."""
