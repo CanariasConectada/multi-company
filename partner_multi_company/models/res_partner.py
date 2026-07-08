@@ -39,11 +39,22 @@ class ResPartner(models.Model):
                 vals["company_id"] = False
             else:
                 for item in vals["company_ids"]:
-                    if item[0] in (Command.UPDATE, Command.LINK):
+                    # ``company_ids`` may arrive as command tuples
+                    # ``(code, id, ids)`` or as the m2m replace shorthand: a
+                    # bare list of ids. A bare id crashed the old ``item[0]``
+                    # indexing with a TypeError, so treat it like a link to
+                    # that company.
+                    if isinstance(item, int):
+                        vals["company_id"] = item
+                        continue
+                    if not isinstance(item, (list, tuple)) or not item:
+                        continue
+                    command = item[0]
+                    if command in (Command.UPDATE, Command.LINK):
                         vals["company_id"] = item[1]
-                    elif item[0] in (Command.DELETE, Command.UNLINK, Command.CLEAR):
+                    elif command in (Command.DELETE, Command.UNLINK, Command.CLEAR):
                         vals["company_id"] = False
-                    elif item[0] == Command.SET:
+                    elif command == Command.SET:
                         if item[2]:
                             vals["company_id"] = item[2][0]
                         else:  # pragma: no cover
