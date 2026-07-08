@@ -1,0 +1,25 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* product_company_default
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+#. module: product_company_default
+#: model:ir.module.module,shortdesc:base.module_product_company_default
+msgid "Product Company Default"
+msgstr "Compañía por Defecto en Productos"
+
+#. module: product_company_default
+#: model:ir.module.module,summary:base.module_product_company_default
+msgid "Assign the current company to new products by default"
+msgstr "Asigna la compañía actual a los productos nuevos por defecto"
