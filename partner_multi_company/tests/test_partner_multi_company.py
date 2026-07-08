@@ -220,9 +220,11 @@ class TestPartnerMultiCompany(common.TransactionCase):
         )
         with Form(self.user_company_1, "base.view_users_form") as user:
             user.company_ids.remove(self.company_2.id)
+        # Removing a company from the user must revoke it from the partner
+        # card too, so the contact stops being visible to that company.
         self.assertEqual(
             self.user_company_1.partner_id.company_ids,
-            self.company_1 | self.company_2,
+            self.company_1,
         )
 
     def test_switch_user_partner_company_ids(self):
@@ -233,9 +235,11 @@ class TestPartnerMultiCompany(common.TransactionCase):
             self.company_1 | self.company_2,
         )
         self.user_company_1.company_ids = self.company_1.ids
+        # Narrowing the user's companies revokes the dropped one from the
+        # partner card instead of leaving it silently visible.
         self.assertEqual(
             self.user_company_1.partner_id.company_ids,
-            self.company_1 | self.company_2,
+            self.company_1,
         )
 
     def test_switch_user_partner_company_set(self):
@@ -248,9 +252,11 @@ class TestPartnerMultiCompany(common.TransactionCase):
             self.company_1 | self.company_2,
         )
         self.user_company_1.company_ids = [Command.set([self.company_1.id])]
+        # Command.set to a smaller set revokes the removed company from the
+        # partner card.
         self.assertEqual(
             self.user_company_1.partner_id.company_ids,
-            self.company_1 | self.company_2,
+            self.company_1,
         )
 
     def test_switch_user_partner_company_link(self):
@@ -261,9 +267,10 @@ class TestPartnerMultiCompany(common.TransactionCase):
             self.company_1 | self.company_2,
         )
         self.user_company_1.company_ids = [Command.unlink(self.company_2.id)]
+        # Command.unlink revokes the company from the partner card too.
         self.assertEqual(
             self.user_company_1.partner_id.company_ids,
-            self.company_1 | self.company_2,
+            self.company_1,
         )
 
     def test_commercial_fields_implementation(self):

@@ -33,19 +33,25 @@ class ResUsers(models.Model):
         return users
 
     def write(self, vals):
+        res = super(ResUsers, self.with_context(from_res_users=True)).write(vals)
         if "company_ids" in vals:
             for user in self.sudo():
-                commands = []
-                company_ids_data = vals["company_ids"]
-                if isinstance(company_ids_data, list) and user.partner_id.company_ids:
-                    for item in company_ids_data:
-                        if isinstance(item, (list | tuple)):
-                            if item[0] == Command.LINK:
-                                commands.append(item)
-                            if item[0] == Command.SET:
-                                for company_id in item[2]:
-                                    commands.append(Command.link(company_id))
-                        else:
-                            commands.append(Command.link(item))
-                    user.partner_id.company_ids = commands
-        return super(ResUsers, self.with_context(from_res_users=True)).write(vals)
+                partner = user.partner_id
+                # Global partners (no company_ids) are visible everywhere on
+                # purpose, so we never narrow them here.
+                if not partner.company_ids:
+                    continue
+                user_company_ids = user.company_ids.ids
+                if set(partner.company_ids.ids) != set(user_company_ids):
+                    # Mirror the user's companies onto its contact card:
+                    # grant the newly added ones AND revoke the removed ones.
+                    # The previous implementation only ever linked companies,
+                    # so a user pulled out of a company kept a contact card
+                    # that stayed visible to that company. ``Command.set``
+                    # reflects the revocation too. This runs *after*
+                    # ``super().write`` so ``user.company_ids`` already holds
+                    # the final set and the ``res.partner`` company constraint
+                    # (partner companies must cover the user's) sees a
+                    # consistent state for both additions and removals.
+                    partner.company_ids = [Command.set(user_company_ids)]
+        return res
