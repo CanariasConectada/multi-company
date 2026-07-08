@@ -31,7 +31,19 @@ class MailThread(models.AbstractModel):
         to_unsubscribe = []
         for thread in self:
             new_partners_ids = thread.message_partner_ids
-            previous_partners_ids = thread.sudo().message_follower_ids.partner_id
+            # ``message_follower_ids`` read through sudo() also returns
+            # followers hidden from the current user by partner-visibility
+            # rules (e.g. another company's contacts). Those never appear in
+            # ``message_partner_ids`` (built with a rule-aware search), so
+            # diffing the new set against the *full* sudo set would classify
+            # every hidden follower as "removed" and silently unsubscribe
+            # followers the editor cannot even see. Restrict the "previous"
+            # side to the partners the user is actually allowed to see, so
+            # hidden followers are left untouched.
+            previous_all_ids = thread.sudo().message_follower_ids.partner_id.ids
+            previous_partners_ids = self.env["res.partner"].search(
+                [("id", "in", previous_all_ids)]
+            )
             removed_partners_ids = previous_partners_ids - new_partners_ids
             added_partners_ids = new_partners_ids - previous_partners_ids
             if added_partners_ids:
