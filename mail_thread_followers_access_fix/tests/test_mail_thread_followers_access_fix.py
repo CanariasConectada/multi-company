@@ -60,3 +60,14 @@ class TestMailThreadFollowersAccessFix(TransactionCase):
             self.assertIn(self.hidden_colleague.partner_id, followers)
         finally:
             rule.active = True
+
+    def test_editing_followers_keeps_hidden_follower(self):
+        # The merchant only sees the visible follower. Re-writing the
+        # follower set (touching only what it can see) must NOT silently
+        # unsubscribe the hidden follower it cannot even read.
+        doc = self.document.with_user(self.merchant)
+        doc.invalidate_recordset()
+        doc.message_partner_ids = self.visible_colleague.partner_id
+        followers = self.document.sudo().message_follower_ids.partner_id
+        self.assertIn(self.hidden_colleague.partner_id, followers)
+        self.assertIn(self.visible_colleague.partner_id, followers)
