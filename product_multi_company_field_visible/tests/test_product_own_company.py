@@ -1,7 +1,7 @@
 # Copyright 2026 Canarias Conectada
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import new_test_user, tagged
 from odoo.tests.common import TransactionCase
 
@@ -76,3 +76,31 @@ class TestProductOwnCompany(TransactionCase):
         param.set_param("multi_company_field_visible.product", "True")
         product.invalidate_recordset()
         self.assertTrue(product.with_user(self.merchant_a).show_own_company_field)
+
+    def test_direct_blank_company_ids_raises_for_merchant(self):
+        # The own_company_ids inverse quietly refills a blank selection, but
+        # writing the raw company_ids to empty has no such fallback: the
+        # create/write safety net (_check_own_company_not_blank) must reject a
+        # non multi-company user leaving an exposed record global.
+        product = self._product(self.company_a.ids)
+        with self.assertRaises(ValidationError):
+            product.with_user(self.merchant_a).company_ids = False
+
+    def test_search_own_company_ids_scopes_out_foreign(self):
+        # _search_own_company_ids mirrors a query on the proxy onto the real
+        # company_ids, but scoped to the user's own companies, so it can never
+        # surface a record the merchant does not co-own -- not even when the
+        # query explicitly targets a foreign company.
+        owned = self._product(self.company_a.ids)
+        foreign = self.Product.sudo().create(
+            {"name": "FV Foreign", "company_ids": [(6, 0, self.company_b.ids)]}
+        )
+        as_merchant = self.Product.with_user(self.merchant_a)
+        self.assertIn(
+            owned,
+            as_merchant.search([("own_company_ids", "in", self.company_a.ids)]),
+        )
+        self.assertNotIn(
+            foreign,
+            as_merchant.search([("own_company_ids", "in", self.company_b.ids)]),
+        )
