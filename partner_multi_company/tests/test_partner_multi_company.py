@@ -332,6 +332,16 @@ class TestPartnerMultiCompany(common.TransactionCase):
         """Multiple companies are assigned to the user,
         check that partner companies are aligned."""
         new_user = new_test_user(self.env, login="test_assign_user_multi_companies")
+        # Seed the partner with every company we are about to grant the user.
+        # Writing ``company_id`` in the same call makes base ``res.users.write``
+        # re-sync the partner's ``company_id``, whose inverse only *links*
+        # companies onto the partner (never the full set). Without this seed the
+        # partner<->user company constraint (partner must cover all the user's
+        # companies) sees an intermediate state missing ``company_2`` and fails.
+        new_user.partner_id.company_ids = [
+            Command.link(self.company_1.id),
+            Command.link(self.company_2.id),
+        ]
         new_user.write(
             {
                 "company_id": self.company_1.id,
