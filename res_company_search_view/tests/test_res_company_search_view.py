@@ -73,6 +73,14 @@ class TestResCompanySearchView(TransactionCase):
 
     def test_archived_filter(self):
         """Ensure Archived filter domain works."""
+        # Odoo's core ``website`` module forbids archiving a company that still
+        # owns a website. In the full image other installed modules (e.g.
+        # auto_microsite_generator) auto-create one website per company, so we
+        # detach any linked website before archiving to exercise the filter.
+        if "website" in self.env:
+            self.env["website"].search(
+                [("company_id", "=", self.company_beta.id)]
+            ).company_id = self.company_alpha.id
         self.company_beta.active = False
         domain = self._get_filter_domain("inactive")
         result = self.Company.search(domain)
