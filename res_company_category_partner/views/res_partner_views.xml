@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+Copyright 2026 Canarias Conectada
+License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
+-->
+<odoo>
+    <record id="view_partner_form" model="ir.ui.view">
+        <field name="name">res.partner.form.company.category</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='category_id']" position="after">
+                <field name="show_company_category" invisible="1" />
+                <!--
+                    Quick-create is disabled on purpose: name_create would
+                    build a parentless (root) category, which the server
+                    rejects for non-administrators. "Create and edit..."
+                    still opens the full dialog, where a parent can (and
+                    must, for non-admins) be picked.
+                -->
+                <field
+                    name="company_category_id"
+                    invisible="not show_company_category"
+                    options="{'no_quick_create': True}"
+                />
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,94 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* res_company_category_partner
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: res_company_category_partner
+#: code:addons/res_company_category_partner/models/res_partner.py:0
+msgid ""
+"%(partner)s is not the main contact of any company, so no company category "
+"can be set on it."
+msgstr ""
+"%(partner)s no es el contacto principal de ninguna compañía, así que no se "
+"le puede asignar una categoría de compañía."
+
+#. module: res_company_category_partner
+#: model:res.groups.privilege,name:res_company_category_partner.res_groups_privilege_company_categories
+msgid "Company Categories"
+msgstr "Categorías de compañía"
+
+#. module: res_company_category_partner
+#: model:ir.model.fields,field_description:res_company_category_partner.field_res_partner__company_category_id
+#: model:ir.model.fields,field_description:res_company_category_partner.field_res_users__company_category_id
+msgid "Company Category"
+msgstr "Categoría de la compañía"
+
+#. module: res_company_category_partner
+#: model:res.groups,name:res_company_category_partner.group_company_category_manager
+msgid "Company Category Manager"
+msgstr "Gestor de categorías de compañía"
+
+#. module: res_company_category_partner
+#: model:res.users,name:res_company_category_partner.demo_user_company_category_manager
+msgid "Company Category Manager (demo)"
+msgstr "Gestor de categorías de compañía (demo)"
+
+#. module: res_company_category_partner
+#: model:res.groups,comment:res_company_category_partner.group_company_category_manager
+msgid ""
+"Members can assign the category of a company from its main contact form and"
+" create new leaf categories under an existing parent. Only administrators "
+"can create root categories."
+msgstr ""
+"Los miembros pueden asignar la categoría de una compañía desde la ficha de "
+"su contacto principal y crear nuevas categorías hoja bajo un padre "
+"existente. Solo los administradores pueden crear categorías raíz."
+
+#. module: res_company_category_partner
+#: code:addons/res_company_category_partner/models/res_company_category.py:0
+msgid ""
+"Only administrators can create root company categories. Pick an existing "
+"parent category and create the new one as a leaf under it."
+msgstr ""
+"Solo los administradores pueden crear categorías de compañía raíz. Elija "
+"una categoría padre existente y cree la nueva como hoja bajo ella."
+
+#. module: res_company_category_partner
+#: code:addons/res_company_category_partner/models/res_partner.py:0
+msgid ""
+"Only members of the \"Company Category Manager\" group can change the "
+"category of a company from its contact."
+msgstr ""
+"Solo los miembros del grupo \"Gestor de categorías de compañía\" pueden "
+"cambiar la categoría de una compañía desde su contacto."
+
+#. module: res_company_category_partner
+#: model:ir.model.fields,field_description:res_company_category_partner.field_res_partner__show_company_category
+#: model:ir.model.fields,field_description:res_company_category_partner.field_res_users__show_company_category
+msgid "Show Company Category"
+msgstr "Mostrar categoría de la compañía"
+
+#. module: res_company_category_partner
+#: model:res.company.category,name:res_company_category_partner.category_shop_wholesale
+msgid "Wholesale Shops"
+msgstr "Tiendas mayoristas"
+
+#. module: res_company_category_partner
+#: code:addons/res_company_category_partner/models/res_partner.py:0
+msgid ""
+"You cannot change the category of company %(company)s: it is not among your"
+" active companies."
+msgstr ""
+"No puede cambiar la categoría de la compañía %(company)s: no está entre sus"
+" compañías activas."
