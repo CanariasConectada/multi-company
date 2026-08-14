@@ -128,6 +128,17 @@ class MultiCompanyAbstract(models.AbstractModel):
         """``ir.config_parameter`` key gating this model. Bridges override it."""
         return None
 
+    def _guard_own_companies(self):
+        """The companies that count as "mine" when checking ownership.
+
+        A hook, because belonging to a company is not always the same as that
+        company being somewhere the user's records can live: a deployment may
+        put its users in companies that stand for something else (a zone, a
+        group, a franchise), and a record left under one of those would pass a
+        naive check while being just as lost as one left under none.
+        """
+        return self.env.user.company_ids
+
     def _check_own_company_kept(self):
         # A user who is not a platform administrator must never end up owning
         # none of a record they just edited the ownership of.
@@ -179,7 +190,7 @@ class MultiCompanyAbstract(models.AbstractModel):
             # the merchants this rule exists to protect hold that group, so it
             # would exempt precisely the people it must apply to.
             return
-        mine = self.env.user.company_ids
+        mine = self._guard_own_companies()
         if not mine:
             # A user with no company of their own has nothing to keep.
             return

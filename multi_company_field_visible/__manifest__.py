@@ -4,7 +4,7 @@
 {
     "name": "Multi Company Field Visible",
     "summary": "Let non multi-company users manage their own company on records",
-    "version": "19.0.2.0.0",
+    "version": "19.0.2.1.0",
     "author": "Canarias Conectada, Odoo Community Association (OCA)",
     "website": "https://github.com/OCA/multi-company",
     "category": "Tools",
