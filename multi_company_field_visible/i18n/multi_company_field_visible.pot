@@ -14,6 +14,11 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. module: multi_company_field_visible
+#: model:ir.model.fields,field_description:multi_company_field_visible.field_multi_company_abstract__company_ids
+msgid "Companies"
+msgstr ""
+
+#. module: multi_company_field_visible
 #: model:ir.model.fields,field_description:multi_company_field_visible.field_multi_company_abstract__display_name
 msgid "Display Name"
 msgstr ""
@@ -41,5 +46,8 @@ msgstr ""
 #. module: multi_company_field_visible
 #. odoo-python
 #: code:addons/multi_company_field_visible/models/multi_company_abstract.py:0
-msgid "You must assign at least your own company to “%(name)s”."
+msgid ""
+"“%(name)s” must stay assigned to at least one of your own companies "
+"(%(companies)s). Leaving it under another company only would remove it from "
+"your shop and you would no longer be able to find it."
 msgstr ""
