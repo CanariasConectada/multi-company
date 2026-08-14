@@ -40,7 +40,18 @@ msgid "Show Own Company Field"
 msgstr "Mostrar campo de compañía propia"
 
 #. module: multi_company_field_visible
+#: model:ir.model.fields,field_description:multi_company_field_visible.field_multi_company_abstract__company_ids
+msgid "Companies"
+msgstr "Compañías"
+
+#. module: multi_company_field_visible
 #. odoo-python
 #: code:addons/multi_company_field_visible/models/multi_company_abstract.py:0
-msgid "You must assign at least your own company to “%(name)s”."
-msgstr "Debe asignar al menos su propia compañía a «%(name)s»."
+msgid ""
+"“%(name)s” must stay assigned to at least one of your own companies "
+"(%(companies)s). Leaving it under another company only would remove it from "
+"your shop and you would no longer be able to find it."
+msgstr ""
+"«%(name)s» debe seguir asignado al menos a una de sus propias compañías "
+"(%(companies)s). Dejarlo solo bajo otra compañía lo retiraría de su tienda y "
+"ya no podría encontrarlo."

@@ -6,8 +6,24 @@ from odoo.exceptions import ValidationError
 from odoo.tools import config
 
 
+# Every way the ownership of a record can be edited. ``company_id`` is the
+# Many2one proxy from ``base_multi_company``, whose inverse replaces
+# ``company_ids`` wholesale -- writing it is an ownership edit even though the
+# stored field never appears in the values.
+OWNERSHIP_FIELDS = ("company_id", "company_ids", "own_company_ids")
+
+
 class MultiCompanyAbstract(models.AbstractModel):
     _inherit = "multi.company.abstract"
+
+    # Ownership is the field that decides whether a record shows up in its
+    # owner's shop at all, so a silent change is expensive to diagnose: the
+    # record does not disappear, it just stops belonging. Tracked so the
+    # chatter answers "who took my product off my shop, and when" without a
+    # database session. Odoo tracks Many2many natively (see
+    # `mail_tracking_value._create_tracking_values`), and only models that are
+    # mail threads act on it -- on the rest the attribute is inert.
+    company_ids = fields.Many2many(tracking=True)
 
     # Display proxy over ``company_ids`` meant for a *non* multi-company user (a
     # merchant). It only ever exposes the companies that user owns, so the real
@@ -112,9 +128,17 @@ class MultiCompanyAbstract(models.AbstractModel):
         """``ir.config_parameter`` key gating this model. Bridges override it."""
         return None
 
-    def _check_own_company_not_blank(self):
-        # Safety net behind the inverse: a non multi-company user must not end
-        # up with a blank (global) company set on an exposed model.
+    def _check_own_company_kept(self):
+        # A user who is not a platform administrator must never end up owning
+        # none of a record they just edited the ownership of.
+        #
+        # Reported on 2026-08-14: a merchant cleared the company on one of her
+        # own products and it vanished from her shop. She had not blanked it --
+        # the record still belonged to the platform company, so it stayed
+        # perfectly valid and perfectly invisible to her, which is why nothing
+        # complained and why she could no longer find it to undo it. "Not
+        # blank" was the wrong test; "still mine" is the right one, and it
+        # covers blank as a special case (an empty set intersects nothing).
         #
         # This is deliberately NOT an ``@api.constrains``: while ``write()``
         # holds ``company_ids`` protected (it feeds the computed
@@ -142,29 +166,49 @@ class MultiCompanyAbstract(models.AbstractModel):
             # company's own contact to itself (e.g.
             # ``partner_multi_company_restrict``) fixes it up right after.
             return
-        if self.env.user.has_group("base.group_multi_company"):
-            # Admins may leave it empty on purpose ("All companies" / global).
+        if self.env.su:
+            # Server-side code owns the whole picture and legitimately writes
+            # ownership the user could not write themselves -- the display
+            # proxy's own inverse below does exactly that. Exempting ``sudo``
+            # is not a loophole: it cannot be reached from the interface.
+            return
+        if self.env.user.has_group("base.group_system"):
+            # Platform administrators may leave a record global on purpose.
+            # Note this is deliberately NOT ``base.group_multi_company``, which
+            # would have been the intuitive choice and is useless here: 116 of
+            # the merchants this rule exists to protect hold that group, so it
+            # would exempt precisely the people it must apply to.
+            return
+        mine = self.env.user.company_ids
+        if not mine:
+            # A user with no company of their own has nothing to keep.
             return
         for record in self:
-            if not record._own_company_field_param_enabled():
-                continue
             record.invalidate_recordset(["company_ids"])
-            if not record.sudo().company_ids:
-                raise ValidationError(
-                    self.env._(
-                        "You must assign at least your own company to “%(name)s”.",
-                        name=record.display_name,
-                    )
+            if record.sudo().company_ids & mine:
+                continue
+            raise ValidationError(
+                self.env._(
+                    "“%(name)s” must stay assigned to at least one of your own "
+                    "companies (%(companies)s). Leaving it under another "
+                    "company only would remove it from your shop and you would "
+                    "no longer be able to find it.",
+                    name=record.display_name,
+                    companies=", ".join(mine.mapped("name")),
                 )
+            )
 
     def write(self, vals):
+        # Snapshot before ``super()``: ``base_multi_company._multicompany_patch_vals``
+        # pops ``company_id`` out of this very dict when both fields are given.
+        touches_ownership = any(field in vals for field in OWNERSHIP_FIELDS)
         result = super().write(vals)
-        if "company_ids" in vals:
-            self._check_own_company_not_blank()
+        if touches_ownership:
+            self._check_own_company_kept()
         return result
 
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
-        records._check_own_company_not_blank()
+        records._check_own_company_kept()
         return records

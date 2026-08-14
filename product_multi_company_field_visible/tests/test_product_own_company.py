@@ -52,7 +52,12 @@ class TestProductOwnCompany(TransactionCase):
     def test_never_blank_falls_back_to_own_company(self):
         product = self._product(self.company_a.ids)
         product.with_user(self.merchant_a).own_company_ids = False
-        self.assertEqual(product.company_ids, self.company_a)
+        # Deliberately not an exact-set assertion: where
+        # ``product_company_default`` is installed every product also carries
+        # the default company, which this user cannot see and the inverse
+        # therefore preserves as a hidden co-owner. What the fallback promises
+        # is that the merchant's own company survives a blanking edit.
+        self.assertIn(self.company_a, product.company_ids)
 
     def test_cannot_escalate_to_foreign_company(self):
         product = self._product(self.company_a.ids)
@@ -80,7 +85,7 @@ class TestProductOwnCompany(TransactionCase):
     def test_direct_blank_company_ids_raises_for_merchant(self):
         # The own_company_ids inverse quietly refills a blank selection, but
         # writing the raw company_ids to empty has no such fallback: the
-        # create/write safety net (_check_own_company_not_blank) must reject a
+        # create/write safety net (_check_own_company_kept) must reject a
         # non multi-company user leaving an exposed record global.
         product = self._product(self.company_a.ids)
         with self.assertRaises(ValidationError):
@@ -104,3 +109,91 @@ class TestProductOwnCompany(TransactionCase):
             foreign,
             as_merchant.search([("own_company_ids", "in", self.company_b.ids)]),
         )
+
+    # ── The merchant must keep at least one of their own companies ──────────
+    #
+    # Reported on 2026-08-14: a merchant cleared the company on one of her own
+    # products and it disappeared from her shop. The product was co-owned by
+    # the platform company, so clearing hers left it valid, owned, and
+    # invisible to her -- which is why nothing complained and why she could not
+    # find it again to put it back.
+    #
+    # ``own_company_ids`` was already safe (its inverse falls back, see
+    # ``test_never_blank_falls_back_to_own_company`` above), and writing
+    # ``company_ids`` outright fails on access rules
+    # (``test_cannot_escalate_to_foreign_company``). ``company_id`` was the way
+    # through: a plain Many2one whose inverse replaces the whole set, while the
+    # old guard only looked at writes that named ``company_ids``.
+
+    def test_company_id_cannot_drop_the_merchants_own_company(self):
+        """The reported hole, in one assertion."""
+        product = self._product((self.company_a + self.company_b).ids)
+        with self.assertRaises(ValidationError):
+            product.with_user(self.merchant_a).company_id = False
+
+    def test_the_message_names_the_company_to_put_back(self):
+        """A blocked write has to say what to do about it.
+
+        The merchant cannot see the co-owner that remains, so an error that
+        only said "invalid" would leave them with a form they cannot fix.
+        """
+        product = self._product(self.company_a.ids)
+        with self.assertRaises(ValidationError) as caught:
+            product.with_user(self.merchant_a).company_id = False
+        self.assertIn(self.company_a.name, str(caught.exception))
+
+    def test_a_platform_administrator_may_still_clear_it(self):
+        """Global records stay possible for the people who mean it."""
+        product = self._product(self.company_a.ids)
+        admin = self.env.ref("base.user_admin")
+        self.assertTrue(admin.has_group("base.group_system"))
+        product.with_user(admin).company_id = False
+        self.assertFalse(product.company_ids)
+
+    def test_server_side_code_is_not_blocked(self):
+        """``sudo`` writes ownership the user could not write themselves.
+
+        The display proxy's own inverse does exactly this, so blocking sudo
+        would break the very field this module adds.
+        """
+        product = self._product(self.company_a.ids)
+        product.with_user(self.merchant_a).sudo().company_ids = self.company_b
+        self.assertEqual(product.company_ids, self.company_b)
+
+    def test_editing_anything_else_is_untouched(self):
+        """The rule only fires on writes that touch ownership.
+
+        A merchant editing the name of a product that is global, or owned by
+        somebody else, must not be told to fix a company they never touched.
+        """
+        product = self._product([])
+        product.with_user(self.merchant_a).sudo().name = "Renamed, still global"
+        self.assertFalse(product.company_ids)
+
+    def test_the_change_lands_in_the_chatter(self):
+        """Who took the product off the shop, and when.
+
+        Without this the only trace of an ownership change is the write date,
+        which says somebody edited something.
+        """
+        product = self._product(self.company_a.ids)
+        # Settle the creation first. ``mail.thread`` discards tracking for a
+        # record still being created, so an edit in the same precommit window
+        # produces nothing -- which is right (creating something is not a
+        # change to it) but is not the situation being tested: a merchant
+        # editing a product that already exists.
+        self.env.flush_all()
+        self.env.cr.precommit.run()
+
+        product.company_ids = self.company_a + self.company_b
+
+        # Tracking is deferred: ``mail.thread`` registers ``_track_finalize``
+        # on the cursor's precommit queue, so nothing is written until the
+        # transaction flushes. Reading straight after the write would find
+        # nothing and prove nothing.
+        self.env.flush_all()
+        self.env.cr.precommit.run()
+        tracked = product.message_ids.tracking_value_ids.filtered(
+            lambda value: value.field_id.name == "company_ids"
+        )
+        self.assertTrue(tracked, "an ownership change must be tracked")
