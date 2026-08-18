@@ -74,7 +74,7 @@
         >res.partner: never delete user or company contacts</field>
         <field name="model_id" ref="base.model_res_partner" />
         <field name="domain_force">
-            [('user_ids', '=', False), ('ref_company_ids', '=', False)]
+            [('user_ids', '=', False), ('id', 'not in', user.env['res.company'].sudo().with_context(active_test=False).search([]).partner_id.ids)]
         </field>
         <field name="perm_read" eval="False" />
         <field name="perm_write" eval="False" />
