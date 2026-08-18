@@ -190,3 +190,70 @@ class TestPartnerRestrictCrossCompany(TransactionCase):
             self.assertTrue(found)
         finally:
             rule.sudo().active = True
+
+
+@tagged("post_install", "-at_install")
+class TestPartnerUnlinkOwnContacts(TransactionCase):
+    """A plain internal user may delete their own company's contacts.
+
+    The ACL opens unlink for ``base.group_user`` and the global unlink
+    rule forbids exactly two shapes: a contact that is a user, and a
+    contact that backs a company. Everything else in the user's own
+    company is theirs to clean up.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.company = cls.env["res.company"].create({"name": "Unlink Co"})
+        cls.merchant = new_test_user(
+            cls.env,
+            login="unlink_merchant",
+            groups="base.group_user",
+            company_id=cls.company.id,
+            company_ids=[(6, 0, cls.company.ids)],
+        )
+        cls.plain_contact = (
+            cls.env["res.partner"]
+            .sudo()
+            .create(
+                {
+                    "name": "Disposable customer",
+                    "company_ids": [(6, 0, cls.company.ids)],
+                }
+            )
+        )
+
+    def test_plain_own_company_contact_can_be_deleted(self):
+        self.plain_contact.with_user(self.merchant).unlink()
+        self.assertFalse(self.plain_contact.exists())
+
+    def test_a_contact_that_is_a_user_survives(self):
+        colleague = new_test_user(
+            self.env,
+            login="unlink_colleague",
+            groups="base.group_user",
+            company_id=self.company.id,
+            company_ids=[(6, 0, self.company.ids)],
+        )
+        with self.assertRaises(AccessError):
+            colleague.partner_id.with_user(self.merchant).unlink()
+
+    def test_the_company_contact_survives(self):
+        with self.assertRaises(AccessError):
+            self.company.partner_id.with_user(self.merchant).unlink()
+
+    def test_another_company_contact_stays_out_of_reach(self):
+        other_company = self.env["res.company"].create({"name": "Unlink Co B"})
+        foreign = (
+            self.env["res.partner"]
+            .sudo()
+            .create(
+                {
+                    "name": "Foreign customer",
+                    "company_ids": [(6, 0, other_company.ids)],
+                }
+            )
+        )
+        with self.assertRaises(AccessError):
+            foreign.with_user(self.merchant).unlink()
