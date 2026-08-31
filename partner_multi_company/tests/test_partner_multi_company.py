@@ -352,3 +352,48 @@ class TestPartnerMultiCompany(common.TransactionCase):
             }
         )
         self.assertEqual(new_user.company_ids, new_user.partner_id.company_ids)
+
+    def test_moving_a_user_to_another_company_from_the_form(self):
+        """The Users form sends company_ids AND company_id in one write.
+
+        Base then syncs the partner's own ``company_id`` from the user's
+        (``res_users.py:623``), whose inverse rewrites the partner's
+        ``company_ids`` -- and the constraint used to fire on that
+        half-applied state, so an administrator could not move a user into
+        another company from the interface at all.
+        """
+        user = self.user_company_1
+        user.write(
+            {
+                "company_ids": [Command.set(self.company_2.ids)],
+                "company_id": self.company_2.id,
+            }
+        )
+        self.assertEqual(user.company_ids, self.company_2)
+        self.assertEqual(user.company_id, self.company_2)
+        self.assertEqual(
+            user.partner_id.company_ids,
+            self.company_2,
+            "The contact card must follow the user into its new company.",
+        )
+
+    def test_the_check_is_deferred_not_dropped(self):
+        """Suppressing the constraint during the write must not disable it.
+
+        The card is narrowed behind the user's back (the only way to reach
+        an inconsistent state now), and the very next direct partner write
+        must still be refused -- proving the constraint is alive and it was
+        only the mid-write state that stopped being judged.
+        """
+        user = self.user_company_1
+        user.write(
+            {
+                "company_ids": [Command.set(self.company_2.ids)],
+                "company_id": self.company_2.id,
+            }
+        )
+        with self.assertRaisesRegex(
+            ValidationError,
+            "The partner must have at least all the companies associated with the user",
+        ):
+            user.partner_id.write({"company_ids": [Command.set(self.company_1.ids)]})

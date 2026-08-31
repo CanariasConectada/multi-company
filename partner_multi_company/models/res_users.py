@@ -33,7 +33,19 @@ class ResUsers(models.Model):
         return users
 
     def write(self, vals):
-        res = super(ResUsers, self.with_context(from_res_users=True)).write(vals)
+        # Same transient as in ``create``, and it bit an administrator moving
+        # a merchant user into their own shop from the Users form. ``super()``
+        # walks a long chain -- base_user_role, base's own ``company_id`` ->
+        # ``partner.company_id`` sync at ``res_users.py:623``, and every
+        # module hooking ``res.users.write`` -- and somewhere in there the
+        # partner's ``company_ids`` are validated while the user's companies
+        # have already moved and the partner's have not. Suppress the check
+        # for the duration and run it once below, on the final state, so an
+        # inconsistent write still fails.
+        res = super(
+            ResUsers,
+            self.with_context(from_res_users=True, res_users_write_in_progress=True),
+        ).write(vals)
         if "company_ids" in vals:
             for user in self.sudo():
                 partner = user.partner_id
@@ -54,4 +66,16 @@ class ResUsers(models.Model):
                     # (partner companies must cover the user's) sees a
                     # consistent state for both additions and removals.
                     partner.company_ids = [Command.set(user_company_ids)]
+        # The constraint was deferred, not dropped. Run it here, on the state
+        # the transaction will actually keep. Only when the write could have
+        # moved a company: every other ``res.users.write`` (and there are
+        # many, on every login) must not pay for a check that cannot fail.
+        # ``sudo`` because the acting administrator need not have read access
+        # to every company on the card, and the check is about consistency,
+        # not about visibility.
+        if "company_ids" in vals or "company_id" in vals:
+            self.sudo().partner_id.with_context(
+                res_users_creation_in_progress=False,
+                res_users_write_in_progress=False,
+            )._check_company_id()
         return res

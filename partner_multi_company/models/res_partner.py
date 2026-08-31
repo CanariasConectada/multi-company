@@ -65,13 +65,17 @@ class ResPartner(models.Model):
 
     @api.constrains("company_ids")
     def _check_company_id(self):
-        if self.env.context.get("res_users_creation_in_progress"):
-            # Mid-``res.users.create()`` the partner's companies are in a
-            # transient state (base syncs ``company_id``, whose inverse
-            # rewrites ``company_ids``, before our own create override
-            # aligns them with all the user's companies). The alignment
-            # write at the end of ``res.users.create()`` re-triggers this
-            # constraint on the final state. See ``res_users.py``.
+        if self.env.context.get(
+            "res_users_creation_in_progress"
+        ) or self.env.context.get("res_users_write_in_progress"):
+            # Mid-``res.users.create()`` (and mid-``write()``) the partner's
+            # companies are in a transient state: base syncs the partner's
+            # ``company_id`` from the user's (``res_users.py:623``), whose
+            # inverse rewrites ``company_ids``, while the user's own
+            # companies have already moved -- and this constraint fires on
+            # that half-applied state. ``res.users`` re-runs the check on
+            # the final state at the end of both overrides, so nothing is
+            # skipped, only deferred. See ``res_users.py``.
             return
         for rec in self:
             if rec.user_ids:
